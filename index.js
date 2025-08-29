@@ -753,13 +753,50 @@ class BMWISTADownloader {
   async run() {
     try {
       await this.initialize();
+      
+      // Get check interval from environment (default: 6 hours)
+      const checkIntervalHours = parseInt(process.env.CHECK_INTERVAL_HOURS) || 6;
+      const checkIntervalMs = checkIntervalHours * 60 * 60 * 1000;
+      
+      logger.info(`🔄 BMW ISTA Downloader läuft im Dauerbetrieb`);
+      logger.info(`⏰ Update-Checks alle ${checkIntervalHours} Stunden (${checkIntervalMs / 1000 / 60} Minuten)`);
+      
+      // Run initial check
+      logger.info('🚀 Führe ersten Update-Check durch...');
       await this.checkForUpdates();
       
-      // Wait a bit before cleanup to ensure all downloads are complete
-      logger.info('⏳ Warte auf Abschluss aller Downloads...');
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      // Set up continuous operation
+      while (true) {
+        logger.info(`⏳ Warte ${checkIntervalHours} Stunden bis zum nächsten Update-Check...`);
+        
+        // Wait for the specified interval
+        await new Promise(resolve => setTimeout(resolve, checkIntervalMs));
+        
+        logger.info('🔄 Führe regelmäßigen Update-Check durch...');
+        
+        try {
+          // Restart browser to prevent memory leaks
+          logger.info('🔄 Starte Browser neu...');
+          await this.cleanup();
+          await this.launchBrowser();
+          
+          // Reset login status after browser restart
+          this.isLoggedIn = false;
+          
+          await this.checkForUpdates();
+        } catch (error) {
+          logger.error(`❌ Fehler beim Update-Check: ${error.message}`);
+          logger.info('🔄 Versuche es beim nächsten Intervall erneut...');
+          
+          // Ensure browser is cleaned up even if there's an error
+          try {
+            await this.cleanup();
+          } catch (cleanupError) {
+            logger.error(`❌ Fehler beim Aufräumen: ${cleanupError.message}`);
+          }
+        }
+      }
       
-      await this.cleanup();
     } catch (error) {
       logger.error(`❌ Kritischer Fehler: ${error.message}`);
       await this.cleanup();
@@ -772,12 +809,13 @@ class BMWISTADownloader {
 const downloader = new BMWISTADownloader();
 
 process.on('SIGINT', async () => {
-  logger.info('\n👋 Beende BMW ISTA-P Downloader...');
+  logger.info('\n👋 Beende BMW ISTA Downloader...');
   await downloader.cleanup();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
+  logger.info('\n👋 Beende BMW ISTA Downloader...');
   await downloader.cleanup();
   process.exit(0);
 });
