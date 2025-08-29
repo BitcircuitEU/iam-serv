@@ -1,0 +1,23 @@
+{
+  "name": "bmw-ista-downloader",
+  "version": "1.0.0",
+  "description": "IAM Serv Software Downloader",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "debug": "node index.js --debug",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0",
+    "axios": "^1.6.0",
+    "winston": "^3.11.0",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.3.1",
+    "cheerio": "^1.0.0-rc.12"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
